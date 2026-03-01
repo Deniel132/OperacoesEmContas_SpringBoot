@@ -6,6 +6,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 @Entity
 @Data
 public class ContaModel {
@@ -17,6 +19,6 @@ public class ContaModel {
     private String nomeTitular;
     private boolean status = true;
     private Integer tipoDaConta;
-
+    private BigDecimal saldo;
 
 }

@@ -18,8 +18,8 @@ public class ContaBancariaController {
     }
 
 
-    @GetMapping("/mostrarconta/{id}")
-    public ContaModel mostrarConta(@PathVariable() Long id){return contaBancariaService.getById(id);}
+    @GetMapping("/mostrarconta/{id}/{numeroConta}/{numeroAgencia}")
+    public ContaModel mostrarConta(@PathVariable() Long id,@PathVariable() Long numeroConta,@PathVariable() Long numeroAgencia){return contaBancariaService.getById(id,numeroConta,numeroAgencia);}
 
     @GetMapping
     public List<ContaModel> listarContas(){return contaBancariaService.getAll();}

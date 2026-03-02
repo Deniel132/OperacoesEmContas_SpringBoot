@@ -1,9 +1,7 @@
 package dev.Deniel.ContaBancaria.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import dev.Deniel.ContaBancaria.model.Enums.TiposDeConta;
+import jakarta.persistence.*;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -16,9 +14,13 @@ public class ContaModel {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private Long numeroDaConta;
+    private Long agenciaDaConta;
+
     private String nomeTitular;
     private boolean status = true;
-    private Integer tipoDaConta;
+
+    private TiposDeConta tipoDaConta;
     private BigDecimal saldo;
 
 }

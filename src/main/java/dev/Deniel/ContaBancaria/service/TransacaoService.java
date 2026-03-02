@@ -3,7 +3,6 @@ package dev.Deniel.ContaBancaria.service;
 import dev.Deniel.ContaBancaria.DTO.TransacaoDTO;
 import dev.Deniel.ContaBancaria.model.ContaModel;
 import dev.Deniel.ContaBancaria.model.TransacaoModel;
-import dev.Deniel.ContaBancaria.repository.ContaBancariaRepository;
 import dev.Deniel.ContaBancaria.repository.TransacaoRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -18,20 +17,19 @@ public class TransacaoService {
 
     private final TransacaoRepository transacaoRepository;
     private final ContaBancariaService contaBancariaService;
-    private final ContaBancariaRepository contaBancariaRepository;
 
-    public TransacaoService(TransacaoRepository transacaoRepository, ContaBancariaService contaBancariaService, ContaBancariaRepository contaBancariaRepository) {
+    public TransacaoService(TransacaoRepository transacaoRepository,ContaBancariaService contaBancariaService) {
         this.transacaoRepository = transacaoRepository;
         this.contaBancariaService = contaBancariaService;
-        this.contaBancariaRepository = contaBancariaRepository;
+
     }
 
     public List<TransacaoModel>getAll(){return this.transacaoRepository.findAll();}
 
     private TransacaoModel save(@NonNull TransacaoDTO transacaoDTO){
 
-        ContaModel conta = contaBancariaService.getById(transacaoDTO.getIdConta());
-        ContaModel SegundacontaModel = contaBancariaRepository.findById(transacaoDTO.getIdSegundaConta()).orElse(null);
+        ContaModel conta = contaBancariaService.getById(transacaoDTO.getIdConta(),transacaoDTO.getNumeroDaConta(),transacaoDTO.getAgenciaDaConta());
+        ContaModel SegundacontaModel = contaBancariaService.getByIdSemException(transacaoDTO.getIdSegundaConta());
 
         TransacaoModel transacaoModel = new TransacaoModel();
 
@@ -48,23 +46,24 @@ public class TransacaoService {
         TransacaoModel transacaoModel = getById(id);
 
         switch (transacaoModel.getOperacao()){
-            case 1:
-                deposito(transacaoModel.getConta().getId(),transacaoModel.getValor());
+            case SAQUE:
+                deposito(transacaoModel.getConta().getId(),transacaoModel.getConta().getNumeroDaConta(),
+                        transacaoModel.getConta().getAgenciaDaConta(),transacaoModel.getValor());
 
                 break;
-            case 2:
-                saque(transacaoModel.getConta().getId(),transacaoModel.getValor());
+            case DEPOSITO:
+                saque(transacaoModel.getConta().getId(),transacaoModel.getConta().getNumeroDaConta(),
+                        transacaoModel.getConta().getAgenciaDaConta(),transacaoModel.getValor());
 
                 break;
-            case 3:
-                    saque(transacaoModel.getSegundaConta().getId(),transacaoModel.getValor());
-                    deposito(transacaoModel.getConta().getId(),transacaoModel.getValor());
-                break;
+            case TRANSFERENCIA:
+                    saque(transacaoModel.getSegundaConta().getId(),transacaoModel.getSegundaConta().getNumeroDaConta(),
+                            transacaoModel.getSegundaConta().getAgenciaDaConta(),transacaoModel.getValor());
 
-            default:
-                throw new EntityNotFoundException();
+                    deposito(transacaoModel.getConta().getId(),transacaoModel.getConta().getNumeroDaConta(),
+                            transacaoModel.getConta().getAgenciaDaConta(),transacaoModel.getValor());
+                break;
         }
-
 
 
         this.transacaoRepository.deleteById(id);
@@ -82,13 +81,13 @@ public class TransacaoService {
     public TransacaoModel operacao(@NonNull TransacaoDTO transacaoDTO){
 
         switch (transacaoDTO.getOperacao()){
-            case 1:
-               saque(transacaoDTO.getIdConta(),transacaoDTO.getValor());
+            case SAQUE:
+               saque(transacaoDTO.getIdConta(),transacaoDTO.getNumeroDaConta(),transacaoDTO.getAgenciaDaConta(),transacaoDTO.getValor());
                 break;
-            case 2:
-                deposito(transacaoDTO.getIdConta(),transacaoDTO.getValor());
+            case DEPOSITO:
+                deposito(transacaoDTO.getIdConta(),transacaoDTO.getNumeroDaConta(),transacaoDTO.getAgenciaDaConta(),transacaoDTO.getValor());
                 break;
-            case 3:
+            case TRANSFERENCIA:
                 transferncia(transacaoDTO);
                 break;
 
@@ -101,19 +100,19 @@ public class TransacaoService {
 
 
 
-    private void saque(Long idConta, BigDecimal valor){
-        ContaModel conta = contaBancariaService.getById(idConta);
+    private void saque(Long idConta,Long numeroConta,Long numeroAgencia, BigDecimal valor){
+        ContaModel conta = contaBancariaService.getById(idConta,numeroConta,numeroAgencia);
 
-        if (conta.getSaldo().compareTo(valor) > 0){
+        if (conta.getSaldo().compareTo(valor) >= 0){
             conta.setSaldo(conta.getSaldo().subtract(valor));
         }else {
-            throw new RuntimeException();
+            throw new IllegalArgumentException("Valor de saque maior que o saldo");
         }
     }
 
 
-    private void deposito(Long idConta, BigDecimal valor){
-        ContaModel conta = contaBancariaService.getById(idConta);
+    private void deposito(Long idConta,Long numeroConta,Long numeroAgencia, BigDecimal valor){
+        ContaModel conta = contaBancariaService.getById(idConta,numeroConta,numeroAgencia);
         conta.setSaldo(conta.getSaldo().add(valor));
     }
 
@@ -121,12 +120,12 @@ public class TransacaoService {
         if (transacaoDTO.getIdConta().equals(transacaoDTO.getIdSegundaConta())){
             throw new EntityNotFoundException();
         }else {
-            ContaModel conta = contaBancariaService.getById(transacaoDTO.getIdConta());
-            ContaModel contaSecundaria = contaBancariaRepository.findById(transacaoDTO.getIdSegundaConta()).orElse(null);
+            ContaModel conta = contaBancariaService.getById(transacaoDTO.getIdConta(),transacaoDTO.getNumeroDaConta(),transacaoDTO.getAgenciaDaConta());
+            ContaModel contaSecundaria = contaBancariaService.getById(transacaoDTO.getIdSegundaConta(),transacaoDTO.getNumeroDaSegundaConta(),transacaoDTO.getAgenciaDaSegundaConta());
 
-            if (conta != null && contaSecundaria != null){
-                saque(transacaoDTO.getIdConta(), transacaoDTO.getValor());
-                deposito(transacaoDTO.getIdSegundaConta(), transacaoDTO.getValor());
+            if (conta != contaSecundaria){
+                saque(transacaoDTO.getIdConta(),transacaoDTO.getNumeroDaConta(), transacaoDTO.getAgenciaDaConta(), transacaoDTO.getValor());
+                deposito(transacaoDTO.getIdSegundaConta(),transacaoDTO.getNumeroDaSegundaConta(), transacaoDTO.getAgenciaDaSegundaConta(), transacaoDTO.getValor());
             }
 
         }

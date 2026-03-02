@@ -1,5 +1,6 @@
 package dev.Deniel.ContaBancaria.model;
 
+import dev.Deniel.ContaBancaria.model.Enums.EsolhaTransacao;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -12,7 +13,7 @@ public class TransacaoModel {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Integer operacao;
+    private EsolhaTransacao operacao;
     private BigDecimal valor;
 
     @ManyToOne
